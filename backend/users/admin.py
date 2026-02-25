@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from users.models import CustomUser
 
 UserAdmin.fieldsets += (
-    ('Additional info', {'fields': ('avatar',)}),
+    ('Дополнительная информация', {'fields': ('avatar',)}),
 )
 UserAdmin.search_fields = ('username', 'email')
 
