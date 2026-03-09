@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from api.utils import get_bool_field_value
 from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
 
 User = get_user_model()
@@ -50,7 +49,10 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
-        return get_bool_field_value(user, obj, user.subscriptions)
+
+        if user.is_anonymous:
+            return False
+        return user.subscriptions.filter(author=obj).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -139,11 +141,15 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        return get_bool_field_value(user, obj, user.favorites)
+        if user.is_anonymous:
+            return False
+        return user.favorites.filter(recipe=obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        return get_bool_field_value(user, obj, user.shopping_cart)
+        if user.is_anonymous:
+            return False
+        return user.shopping_cart.filter(recipe=obj).exists()
 
     def validate_tags(self, value):
         tags_ids = [tag.id for tag in value]
