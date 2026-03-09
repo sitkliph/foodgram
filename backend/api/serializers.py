@@ -4,8 +4,8 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
 from api.utils import get_bool_field_value
+from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
 
 User = get_user_model()
 
