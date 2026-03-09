@@ -50,7 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
-        get_bool_field_value(user, obj, user.subscriptions)
+        return get_bool_field_value(user, obj, user.subscriptions)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -139,11 +139,11 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
-        get_bool_field_value(user, obj, user.favorites)
+        return get_bool_field_value(user, obj, user.favorites)
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context['request'].user
-        get_bool_field_value(user, obj, user.shopping_cart)
+        return get_bool_field_value(user, obj, user.shopping_cart)
 
     def validate_tags(self, value):
         tags_ids = [tag.id for tag in value]
@@ -220,7 +220,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
-    """"""
+    """Упрощенный сериализатор для чтения объектов модели Recipe."""
 
     class Meta:
         model = Recipe
@@ -233,7 +233,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(UserSerializer):
-    """"""
+    """Сериализатор для визулизации механизма подписок."""
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(read_only=True)
