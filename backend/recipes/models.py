@@ -115,13 +115,12 @@ class IngredientRecipe(models.Model):
         return f'Состав рецепта {self.recipe.name[:CHARS_LIMIT]}:'
 
 
-class Favorite(models.Model):
-    """"""
+class RecipeOptionsAbsractModel(models.Model):
+    """Абстрактная модель для расширений модели Recipe."""
 
     user = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        related_name='favorites'
+        on_delete=models.CASCADE
     )
     recipe = models.ForeignKey(
         Recipe,
@@ -129,9 +128,31 @@ class Favorite(models.Model):
     )
 
     class Meta:
+        abstract = True
+        ordering = ('user__username',)
+
+
+class Favorite(RecipeOptionsAbsractModel):
+    """Модель избранных рецептов пользователей."""
+
+    class Meta(RecipeOptionsAbsractModel.Meta):
+        default_related_name = 'favorites'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
                 name='unique_favorite'
+            )
+        ]
+
+
+class ShoppingCart(RecipeOptionsAbsractModel):
+    """Модель корзины покупок пользователей."""
+
+    class Meta(RecipeOptionsAbsractModel.Meta):
+        default_related_name = 'shopping_cart'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_recipe_in_cart'
             )
         ]

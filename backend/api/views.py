@@ -15,7 +15,8 @@ from api.serializers import (IngredientSerializer, RecipeMinifiedSerializer,
                              RecipeSerializer, SubscriptionSerializer,
                              TagSerializer, UserAvatarSerializer)
 from backend.settings import HASHIDS
-from recipes.models import Favorite, Ingredient, IngredientRecipe, Recipe, Tag
+from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
+                            ShoppingCart, Tag)
 from users.models import Subscription
 
 User = get_user_model()
@@ -171,24 +172,19 @@ class RecipeViewSet(ModelViewSet):
 
         return Response({'short-link': short_link})
 
-    @action(
-        methods=['POST', 'DELETE'],
-        detail=True,
-        permission_classes=[IsAuthenticated,]
-    )
-    def favorite(self, request, pk=None):
-        """Action для управления избранными рецептами текущего пользователя."""
+    def service_recipe_options_action(self, request, option_model, pk):
+        """Обработчик методов POST, DELETE для корзины покупок и избранного."""
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
 
         if request.method == 'POST':
-            _, created_status = Favorite.objects.get_or_create(
+            _, created_status = option_model.objects.get_or_create(
                 user=user,
                 recipe=recipe
             )
             if not created_status:
                 return Response(
-                    {'errors': 'Рецепт был добавлен в избранное ранее'},
+                    {'errors': 'Рецепт был добавлен ранее'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             serializer = RecipeMinifiedSerializer(
@@ -197,14 +193,43 @@ class RecipeViewSet(ModelViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        current_favorite = Favorite.objects.filter(user=user, recipe=recipe)
-        if not current_favorite.exists():
+        current_option = option_model.objects.filter(user=user, recipe=recipe)
+        if not current_option.exists():
             return Response(
-                {'errors': 'Рецепт не добавлен в избранное'},
+                {'errors': 'Рецепт не добавлен'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        current_favorite.delete()
+        current_option.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        permission_classes=[IsAuthenticated,]
+    )
+    def favorite(self, request, pk=None):
+        """Action для управления избранными рецептами текущего пользователя."""
+        return self.service_recipe_options_action(request, Favorite, pk)
+
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        permission_classes=[IsAuthenticated,]
+    )
+    def shopping_cart(self, request, pk=None):
+        """Action для управления корзиной покупок текущего пользователя."""
+        if request.method == 'GET':
+            return
+        return self.service_recipe_options_action(request, ShoppingCart, pk)
+
+    @action(
+        methods=['GET',],
+        detail=False,
+        permission_classes=[IsAuthenticated,]
+    )
+    def download_shopping_cart(self, request):
+        """Action для скачивания списка покупок пользователя."""
+        pass
 
 
 def redirect_short_link(request, code):
