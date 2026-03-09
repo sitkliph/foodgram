@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -11,11 +11,11 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.filters import IngredientSearchFilter, RecipeFilter
 from api.permissions import DenyAll, IsAuthorOrAdminOrReadOnly
-from api.serializers import (IngredientSerializer, RecipeSerializer,
-                             SubscriptionSerializer, TagSerializer,
-                             UserAvatarSerializer)
+from api.serializers import (IngredientSerializer, RecipeMinifiedSerializer,
+                             RecipeSerializer, SubscriptionSerializer,
+                             TagSerializer, UserAvatarSerializer)
 from backend.settings import HASHIDS
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import Favorite, Ingredient, IngredientRecipe, Recipe, Tag
 from users.models import Subscription
 
 User = get_user_model()
@@ -79,7 +79,7 @@ class UserCustomViewSet(UserViewSet):
         return self.get_paginated_response(serializer.data)
 
     @action(methods=['POST', 'DELETE'], detail=True)
-    def subscribe(self, request, id):
+    def subscribe(self, request, id=None):
         """Action для добавления и удаления подписок текущего пользователя."""
         author = get_object_or_404(
             User.objects.annotate(recipes_count=Count('recipes')), pk=id
@@ -142,7 +142,13 @@ class RecipeViewSet(ModelViewSet):
     # TODO Доступна фильтрация по избранному, списку покупок.
 
     http_method_names = ['get', 'post', 'patch', 'delete']
-    queryset = Recipe.objects.all()
+    queryset = Recipe.objects.prefetch_related(
+        Prefetch(
+            'ingredient_amounts',
+            IngredientRecipe.objects.select_related('ingredient')
+        ),
+        'tags'
+    ).select_related('author')
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthorOrAdminOrReadOnly,)
 
@@ -158,12 +164,47 @@ class RecipeViewSet(ModelViewSet):
 
     @action(['GET',], detail=True, url_path='get-link')
     def get_link(self, request, pk=None):
-        """Функция для получения короткой ссылки на рецепт."""
+        """Action для получения короткой ссылки на рецепт."""
         recipe = get_object_or_404(Recipe, pk=pk)
         code = HASHIDS.encode(recipe.id)
         short_link = request.build_absolute_uri(f'/s/{code}/')
 
         return Response({'short-link': short_link})
+
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        permission_classes=[IsAuthenticated,]
+    )
+    def favorite(self, request, pk=None):
+        """Action для управления избранными рецептами текущего пользователя."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        user = request.user
+
+        if request.method == 'POST':
+            _, created_status = Favorite.objects.get_or_create(
+                user=user,
+                recipe=recipe
+            )
+            if not created_status:
+                return Response(
+                    {'errors': 'Рецепт был добавлен в избранное ранее'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = RecipeMinifiedSerializer(
+                recipe,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        current_favorite = Favorite.objects.filter(user=user, recipe=recipe)
+        if not current_favorite.exists():
+            return Response(
+                {'errors': 'Рецепт не добавлен в избранное'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        current_favorite.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def redirect_short_link(request, code):

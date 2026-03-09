@@ -114,6 +114,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     ingredients = IngredientRecipeSerializer(
         many=True, source='ingredient_amounts', allow_empty=False
     )
+    is_favorited = serializers.SerializerMethodField()
     image = Base64ImageField()
 
     class Meta:
@@ -123,7 +124,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags',
             'author',
             'ingredients',
-            # 'is_favorited',
+            'is_favorited',
             # 'is_in_shopping_cart',
             'name',
             'image',
@@ -136,6 +137,13 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         if self.instance is not None:
             self.fields['image'].required = False
+
+    def get_is_favorited(self, obj):
+        user = self.context['request'].user
+
+        if user.is_anonymous:
+            return False
+        return user.favorites.filter(recipe=obj).exists()
 
     def validate_tags(self, value):
         tags_ids = [tag.id for tag in value]
@@ -251,4 +259,6 @@ class SubscriptionSerializer(UserSerializer):
         if limit:
             recipes = recipes[:int(limit)]
 
-        return RecipeMinifiedSerializer(recipes, many=True).data
+        return RecipeMinifiedSerializer(
+            recipes, many=True, context=self.context
+        ).data
