@@ -56,7 +56,10 @@ class Recipe(BaseAbstractModel):
     """Модель Рецепт для публикаций рецептов пользвоателями."""
 
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name='Автор'
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор',
+        related_name='recipes'
     )
     name = models.CharField('Название', max_length=RECIPE_NAME_LENGTH)
     image = models.ImageField('Картинка', upload_to='recipes/images/')

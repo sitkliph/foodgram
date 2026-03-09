@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -10,9 +12,13 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from api.filters import IngredientSearchFilter, RecipeFilter
 from api.permissions import DenyAll, IsAuthorOrAdminOrReadOnly
 from api.serializers import (IngredientSerializer, RecipeSerializer,
-                             TagSerializer, UserAvatarSerializer)
+                             SubscriptionSerializer, TagSerializer,
+                             UserAvatarSerializer)
 from backend.settings import HASHIDS
 from recipes.models import Ingredient, Recipe, Tag
+from users.models import Subscription
+
+User = get_user_model()
 
 
 class UserCustomViewSet(UserViewSet):
@@ -23,21 +29,19 @@ class UserCustomViewSet(UserViewSet):
     def get_permissions(self):
         if self.action == 'update':
             return [DenyAll(),]
-        elif (
-            self.action == 'me'
-            and self.request
-            and self.request.method != 'DELETE'
-        ):
-            return [IsAuthenticated(),]
         return super().get_permissions()
 
-    @action(['GET',], detail=False)
+    @action(
+        ['GET',],
+        detail=False,
+        permission_classes=[IsAuthenticated,]
+    )
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
 
     @action(methods=['PUT', 'DELETE'], detail=False, url_path='me/avatar')
     def avatar(self, request):
-        """View-функция для управления аватаром текущего пользователя."""
+        """Action для управления аватаром текущего пользователя."""
         user = request.user
         if request.method == 'PUT':
             serializer = UserAvatarSerializer(user, data=request.data)
@@ -53,6 +57,64 @@ class UserCustomViewSet(UserViewSet):
         if serializer.is_valid():
             serializer.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        methods=['GET',],
+        detail=False,
+        permission_classes=[IsAuthenticated,]
+    )
+    def subscriptions(self, request):
+        """Action для получения списка подписок текущего пользователя."""
+        subscriptions = User.objects.filter(
+            subscribers__user=request.user
+        ).annotate(recipes_count=Count('recipes')).order_by('username')
+        page = self.paginate_queryset(subscriptions)
+
+        serializer = SubscriptionSerializer(
+            page,
+            many=True,
+            context={'request': request}
+        )
+
+        return self.get_paginated_response(serializer.data)
+
+    @action(methods=['POST', 'DELETE'], detail=True)
+    def subscribe(self, request, id):
+        """Action для добавления и удаления подписок текущего пользователя."""
+        author = get_object_or_404(
+            User.objects.annotate(recipes_count=Count('recipes')), pk=id
+        )
+        user = request.user
+
+        if request.method == 'POST':
+            if user == author:
+                return Response(
+                    {'errors': 'Нельзя подписаться на самого себя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            _, created_status = Subscription.objects.get_or_create(
+                user=user,
+                author=author
+            )
+            if not created_status:
+                return Response(
+                    {'errors': 'Вы уже подписаны на данного пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = SubscriptionSerializer(
+                author,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        subscription = Subscription.objects.filter(user=user, author=author)
+        if not subscription.exists():
+            return Response(
+                {'errors': 'Вы не подписаны на данного пользователя'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        subscription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -96,7 +158,7 @@ class RecipeViewSet(ModelViewSet):
 
     @action(['GET',], detail=True, url_path='get-link')
     def get_link(self, request, pk=None):
-        """Эндпоинт для получения короткой ссылки на рецепт."""
+        """Функция для получения короткой ссылки на рецепт."""
         recipe = get_object_or_404(Recipe, pk=pk)
         code = HASHIDS.encode(recipe.id)
         short_link = request.build_absolute_uri(f'/s/{code}/')

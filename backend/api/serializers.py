@@ -33,6 +33,8 @@ class UserAvatarSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения объектов модели CustomUser."""
 
+    is_subscribed = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -41,9 +43,16 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'first_name',
             'last_name',
-            # 'is_subscribed',
+            'is_subscribed',
             'avatar'
         )
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+
+        if user.is_anonymous:
+            return False
+        return user.subscriptions.filter(author=obj).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -200,3 +209,46 @@ class RecipeSerializer(serializers.ModelSerializer):
         IngredientRecipe.objects.bulk_create(ingredient_amounts)
 
         return instance
+
+
+class RecipeMinifiedSerializer(serializers.ModelSerializer):
+    """"""
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'id',
+            'name',
+            'image',
+            'cooking_time'
+        )
+
+
+class SubscriptionSerializer(UserSerializer):
+    """"""
+
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(read_only=True)
+
+    class Meta(UserSerializer.Meta):
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+            'avatar'
+        )
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        limit = request.query_params.get('recipes_limit')
+        recipes = obj.recipes.all()
+
+        if limit:
+            recipes = recipes[:int(limit)]
+
+        return RecipeMinifiedSerializer(recipes, many=True).data
