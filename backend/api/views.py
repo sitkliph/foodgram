@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Prefetch, Sum
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -14,6 +15,7 @@ from api.permissions import DenyAll, IsAuthorOrAdminOrReadOnly
 from api.serializers import (IngredientSerializer, RecipeMinifiedSerializer,
                              RecipeSerializer, SubscriptionSerializer,
                              TagSerializer, UserAvatarSerializer)
+from api.utils import generate_shopping_cart_pdf
 from backend.settings import HASHIDS
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
@@ -140,8 +142,6 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 class RecipeViewSet(ModelViewSet):
     """VeiwSet для работы с эндпоинтами модели Recipe."""
 
-    # TODO Доступна фильтрация по избранному, списку покупок.
-
     http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = Recipe.objects.prefetch_related(
         Prefetch(
@@ -229,7 +229,25 @@ class RecipeViewSet(ModelViewSet):
     )
     def download_shopping_cart(self, request):
         """Action для скачивания списка покупок пользователя."""
-        pass
+        ingredients = (
+            IngredientRecipe.objects
+            .filter(recipe__shopping_cart__user=request.user)
+            .values(
+                'ingredient__name',
+                'ingredient__measurement_unit'
+            )
+            .annotate(total_amount=Sum('amount'))
+            .order_by('ingredient__name')
+        )
+
+        pdf_buffer = generate_shopping_cart_pdf(ingredients, request.user)
+
+        return FileResponse(
+            pdf_buffer,
+            as_attachment=True,
+            filename='shopping_cart.pdf',
+            content_type='application/pdf'
+        )
 
 
 def redirect_short_link(request, code):
