@@ -228,10 +228,11 @@ class RecipeViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated,]
     )
     def download_shopping_cart(self, request):
-        """Action для скачивания списка покупок пользователя."""
+        """Action для загрузки списка покупок пользователя."""
+        user = request.user
         ingredients = (
             IngredientRecipe.objects
-            .filter(recipe__shopping_cart__user=request.user)
+            .filter(recipe__shopping_cart__user=user)
             .values(
                 'ingredient__name',
                 'ingredient__measurement_unit'
@@ -240,12 +241,12 @@ class RecipeViewSet(ModelViewSet):
             .order_by('ingredient__name')
         )
 
-        pdf_buffer = generate_shopping_cart_pdf(ingredients, request.user)
+        pdf_buffer = generate_shopping_cart_pdf(ingredients, user)
 
         return FileResponse(
             pdf_buffer,
             as_attachment=True,
-            filename='shopping_cart.pdf',
+            filename=f'{user.username}_shopping_cart.pdf',
             content_type='application/pdf'
         )
 
