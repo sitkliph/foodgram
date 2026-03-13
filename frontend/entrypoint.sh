@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-rm -rf /static/*
+find /static -mindepth 1 -exec rm -rf {} +
 cp -r /app/build/. /static/
 
 exec "$@"
