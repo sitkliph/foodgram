@@ -143,6 +143,7 @@ foodgram
 - Python 3.12.7
 - Django 6.0.2
 - Django REST Framework 3.16.1
+- Djoser 2.3.3
 - Gunicorn 25.1.0
 - ReportLab 4.4.10
 - SQLite
