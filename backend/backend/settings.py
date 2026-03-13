@@ -15,7 +15,9 @@ DEBUG = getenv('DJANGO_DEBUG_MODE', 'false').lower() == 'true'
 
 ALLOWED_HOSTS = getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
-CSRF_TRUSTED_ORIGINS = getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    'https://foodgram.sitkliph.com',
+]
 
 
 INSTALLED_APPS = [
