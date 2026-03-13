@@ -7,4 +7,7 @@ RUN npm install
 COPY . ./
 RUN npm run build
 
-CMD ["cp", "-r", "/app/build/.", "/static/"]
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
