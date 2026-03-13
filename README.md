@@ -147,8 +147,8 @@ foodgram
 - Gunicorn 25.1.0
 - ReportLab 4.4.10
 - SQLite
-- PostgreSQL
 - React
+- PostgreSQL
 - Docker
 
 ## Установка и запуск проекта:
