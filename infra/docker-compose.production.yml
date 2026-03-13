@@ -8,12 +8,14 @@ volumes:
 services:
   db:
     image: postgres:18.3
+    restart: unless-stopped
     env_file:
       - .env
     volumes:
       - pg_data:/var/lib/postgresql
   backend:
     image: sitkliph/foodgram-backend
+    restart: unless-stopped
     env_file: .env
     depends_on:
       - db
@@ -29,6 +31,7 @@ services:
       - static:/static
   gateway:
     image: sitkliph/foodgram-gateway
+    restart: unless-stopped
     depends_on:
       - frontend
       - backend
