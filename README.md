@@ -182,6 +182,9 @@ python manage.py collectstatic
 exit
 ```
 
+## Пример:
+https://foodgram.sitkliph.com/recipes
+
 ## Автор
 ### Бакин Сергей
 e-mail: sergey.bakin2000@gmail.com
