@@ -23,8 +23,6 @@ services:
       - static:/app/collected_static
       - media:/app/media
       - ../data:/data
-    environment:
-      DJANGO_DEBUG_MODE: false
   frontend:
     build: ../frontend
     volumes:
