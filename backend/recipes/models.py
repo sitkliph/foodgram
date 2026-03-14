@@ -29,7 +29,9 @@ class Tag (BaseAbstractModel):
     """Модель Тэг для маркировки рецептов по тематическим категориям."""
 
     name = models.CharField('Наименование', max_length=TAG_NAME_LENGTH)
-    slug = models.SlugField('Идентификатор', max_length=SLUG_LENGTH)
+    slug = models.SlugField(
+        'Идентификатор', max_length=SLUG_LENGTH, db_index=True
+    )
 
     class Meta(BaseAbstractModel.Meta):
         verbose_name = 'тэг'
@@ -39,7 +41,9 @@ class Tag (BaseAbstractModel):
 class Ingredient(BaseAbstractModel):
     """Модель Ингридиент для формирования состава рецептов."""
 
-    name = models.CharField('Наименование', max_length=INGREDIENT_NAME_LENGTH)
+    name = models.CharField(
+        'Наименование', max_length=INGREDIENT_NAME_LENGTH, db_index=True
+    )
     measurement_unit = models.CharField(
         'Единица измерения', max_length=INGREDIENT_MEASUREMENT_UNIT_LENGTH
     )
