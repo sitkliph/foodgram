@@ -258,4 +258,4 @@ def redirect_short_link(request, code):
     except IndexError:
         return Response(status=status.HTTP_404_NOT_FOUND)
     else:
-        return redirect(f'/api/recipes/{recipe_id}/')
+        return redirect(f'/recipes/{recipe_id}/')
