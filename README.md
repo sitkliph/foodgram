@@ -186,6 +186,6 @@ exit
 ## Пример:
 https://foodgram.sitkliph.com/recipes
 
-## Автор
+## Автор:
 ### Бакин Сергей
 e-mail: sergey.bakin2000@gmail.com
