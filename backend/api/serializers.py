@@ -167,13 +167,12 @@ class RecipeSerializer(serializers.ModelSerializer):
                 current_ingredient = Ingredient.objects.get(
                     pk=ingredients_ids[-1]
                 )
+                ingredient_amounts.append(
+                    (current_ingredient, ingredient.get('amount'))
+                )
         except Ingredient.DoesNotExist:
             raise serializers.ValidationError(
                 'Указан несуществующий ингредиент'
-            )
-        else:
-            ingredient_amounts.append(
-                (current_ingredient, ingredient.get('amount'))
             )
 
         if len(ingredients_ids) != len(set(ingredients_ids)):
