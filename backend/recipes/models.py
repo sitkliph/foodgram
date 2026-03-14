@@ -19,7 +19,7 @@ class BaseAbstractModel(models.Model):
     """
     class Meta:
         abstract = True
-        ordering = ['name',]
+        ordering = ['name', ]
 
     def __str__(self):
         return self.name[:CHARS_LIMIT]
@@ -70,7 +70,7 @@ class Recipe(BaseAbstractModel):
     text = models.TextField('Описание')
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления (в минутах)',
-        validators=[MinValueValidator(1),]
+        validators=[MinValueValidator(1), ]
     )
     ingredients = models.ManyToManyField(
         Ingredient, through='IngredientRecipe', verbose_name='Ингридиенты'
@@ -101,7 +101,7 @@ class IngredientRecipe(models.Model):
         verbose_name='Ингридиент'
     )
     amount = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1),],
+        validators=[MinValueValidator(1), ],
         verbose_name='Количество'
     )
 

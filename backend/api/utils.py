@@ -81,8 +81,8 @@ def generate_shopping_cart_pdf(ingredients, user) -> BytesIO:
                 str(index),
                 item['ingredient__name'],
                 (
-                    f'{item['total_amount']} '
-                    f'{item['ingredient__measurement_unit']}'
+                    f'{item["total_amount"]} '
+                    f'{item["ingredient__measurement_unit"]}'
                 ),
             ))
 

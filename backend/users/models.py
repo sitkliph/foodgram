@@ -26,7 +26,7 @@ class CustomUser(AbstractUser):
     class Meta:
         verbose_name = 'пользователь'
         verbose_name_plural = 'Пользователи'
-        ordering = ['username',]
+        ordering = ['username', ]
 
 
 class Subscription(models.Model):

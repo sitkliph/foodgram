@@ -154,7 +154,7 @@ DJOSER = {
         'set_username': ['api.permissions.DenyAll'],
         'user_delete': ['api.permissions.DenyAll'],
         'user': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
-        'user_list': ['rest_framework.permissions.IsAuthenticatedOrReadOnly',],
+        'user_list': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
     },
 }
 

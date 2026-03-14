@@ -31,13 +31,13 @@ class UserCustomViewSet(UserViewSet):
 
     def get_permissions(self):
         if self.action == 'update':
-            return [DenyAll(),]
+            return [DenyAll(), ]
         return super().get_permissions()
 
     @action(
-        ['GET',],
+        ['GET', ],
         detail=False,
-        permission_classes=[IsAuthenticated,]
+        permission_classes=[IsAuthenticated, ]
     )
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
@@ -62,9 +62,9 @@ class UserCustomViewSet(UserViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
-        methods=['GET',],
+        methods=['GET', ],
         detail=False,
-        permission_classes=[IsAuthenticated,]
+        permission_classes=[IsAuthenticated, ]
     )
     def subscriptions(self, request):
         """Action для получения списка подписок текущего пользователя."""
@@ -163,7 +163,7 @@ class RecipeViewSet(ModelViewSet):
         kwargs['partial'] = False
         return self.update(request, *args, **kwargs)
 
-    @action(['GET',], detail=True, url_path='get-link')
+    @action(['GET', ], detail=True, url_path='get-link')
     def get_link(self, request, pk=None):
         """Action для получения короткой ссылки на рецепт."""
         recipe = get_object_or_404(Recipe, pk=pk)
@@ -205,7 +205,7 @@ class RecipeViewSet(ModelViewSet):
     @action(
         methods=['POST', 'DELETE'],
         detail=True,
-        permission_classes=[IsAuthenticated,]
+        permission_classes=[IsAuthenticated, ]
     )
     def favorite(self, request, pk=None):
         """Action для управления избранными рецептами текущего пользователя."""
@@ -214,7 +214,7 @@ class RecipeViewSet(ModelViewSet):
     @action(
         methods=['POST', 'DELETE'],
         detail=True,
-        permission_classes=[IsAuthenticated,]
+        permission_classes=[IsAuthenticated, ]
     )
     def shopping_cart(self, request, pk=None):
         """Action для управления корзиной покупок текущего пользователя."""
@@ -223,9 +223,9 @@ class RecipeViewSet(ModelViewSet):
         return self.service_recipe_options_action(request, ShoppingCart, pk)
 
     @action(
-        methods=['GET',],
+        methods=['GET', ],
         detail=False,
-        permission_classes=[IsAuthenticated,]
+        permission_classes=[IsAuthenticated, ]
     )
     def download_shopping_cart(self, request):
         """Action для загрузки списка покупок пользователя."""
