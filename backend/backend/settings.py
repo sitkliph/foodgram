@@ -15,9 +15,7 @@ DEBUG = getenv('DJANGO_DEBUG_MODE', 'false').lower() == 'true'
 
 ALLOWED_HOSTS = getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://foodgram.sitkliph.com',
-]
+CSRF_TRUSTED_ORIGINS = [f'https://{host}' for host in ALLOWED_HOSTS]
 
 
 INSTALLED_APPS = [
@@ -66,7 +64,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-if DEBUG:
+USE_SQLITE = getenv('USE_SQLITE', 'false').lower() == 'true'
+if USE_SQLITE:
     DATABASE_PARAMS = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
@@ -102,12 +101,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-AUTH_USER_MODEL = 'users.CustomUser'
-
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'backend.backends.UsernameLoginBackend',
-]
+AUTH_USER_MODEL = 'users.User'
 
 
 LANGUAGE_CODE = 'ru-ru'
@@ -141,18 +135,12 @@ REST_FRAMEWORK = {
 
 
 DJOSER = {
+    'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
-        'user': 'api.serializers.UserSerializer',
-        'current_user': 'api.serializers.UserSerializer',
+        'user': 'api.serializers.UserReadSerializer',
+        'current_user': 'api.serializers.UserReadSerializer',
     },
     'PERMISSIONS': {
-        'activation': ['api.permissions.DenyAll'],
-        'password_reset': ['api.permissions.DenyAll'],
-        'password_reset_confirm': ['api.permissions.DenyAll'],
-        'username_reset': ['api.permissions.DenyAll'],
-        'username_reset_confirm': ['api.permissions.DenyAll'],
-        'set_username': ['api.permissions.DenyAll'],
-        'user_delete': ['api.permissions.DenyAll'],
         'user': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
         'user_list': ['rest_framework.permissions.IsAuthenticatedOrReadOnly'],
     },

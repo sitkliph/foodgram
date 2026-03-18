@@ -2,19 +2,22 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count, Prefetch, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import (SAFE_METHODS, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.filters import IngredientSearchFilter, RecipeFilter
-from api.permissions import DenyAll, IsAuthorOrAdminOrReadOnly
+from api.permissions import IsAuthorOrAdmin
 from api.serializers import (IngredientSerializer, RecipeMinifiedSerializer,
-                             RecipeSerializer, SubscriptionSerializer,
-                             TagSerializer, UserAvatarSerializer)
+                             RecipeReadSerializer, RecipeWriteSerializer,
+                             SubscriptionSerializer, TagSerializer,
+                             UserAvatarSerializer)
 from api.utils import generate_shopping_cart_pdf
 from backend.settings import HASHIDS
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
@@ -29,10 +32,10 @@ class UserCustomViewSet(UserViewSet):
 
     http_method_names = ['get', 'post', 'put', 'delete', 'head', 'options']
 
-    def get_permissions(self):
-        if self.action == 'update':
-            return [DenyAll(), ]
-        return super().get_permissions()
+    # def get_permissions(self):
+    #     if self.action == 'update':
+    #         return [DenyAll(), ]
+    #     return super().get_permissions()
 
     @action(
         ['GET', ],
@@ -47,19 +50,18 @@ class UserCustomViewSet(UserViewSet):
         """Action для управления аватаром текущего пользователя."""
         user = request.user
         if request.method == 'PUT':
-            serializer = UserAvatarSerializer(user, data=request.data)
-            if serializer.is_valid():
+            serializer = UserAvatarSerializer(
+                user, data=request.data, context={'request': request}
+            )
+            if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(
                     serializer.data, status=status.HTTP_200_OK
                 )
-            return Response(
-                serializer.errors, status=status.HTTP_400_BAD_REQUEST
-            )
-        serializer = UserAvatarSerializer(user, data={'avatar': None})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        user.avatar = None
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['GET', ],
@@ -110,13 +112,14 @@ class UserCustomViewSet(UserViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        subscription = Subscription.objects.filter(user=user, author=author)
-        if not subscription.exists():
+        is_deleted, _ = Subscription.objects.filter(
+            user=user, author=author
+        ).delete()
+        if not is_deleted:
             return Response(
                 {'errors': 'Вы не подписаны на данного пользователя'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -150,25 +153,26 @@ class RecipeViewSet(ModelViewSet):
         ),
         'tags'
     ).select_related('author')
-    serializer_class = RecipeSerializer
-    permission_classes = (IsAuthorOrAdminOrReadOnly,)
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrAdmin)
 
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
+    def get_serializer_class(self):
+        if self.request.method in SAFE_METHODS:
+            return RecipeReadSerializer
+        return RecipeWriteSerializer
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-    def partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = False
-        return self.update(request, *args, **kwargs)
 
     @action(['GET', ], detail=True, url_path='get-link')
     def get_link(self, request, pk=None):
         """Action для получения короткой ссылки на рецепт."""
         recipe = get_object_or_404(Recipe, pk=pk)
         code = HASHIDS.encode(recipe.id)
-        short_link = request.build_absolute_uri(f'/s/{code}/')
+        path = reverse('short_link', kwargs={'code': code})
+        short_link = request.build_absolute_uri(path)
 
         return Response({'short-link': short_link})
 
@@ -193,13 +197,14 @@ class RecipeViewSet(ModelViewSet):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        current_option = option_model.objects.filter(user=user, recipe=recipe)
-        if not current_option.exists():
+        is_deleted, _ = option_model.objects.filter(
+            user=user, recipe=recipe
+        ).delete()
+        if not is_deleted:
             return Response(
                 {'errors': 'Рецепт не добавлен'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        current_option.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -218,8 +223,6 @@ class RecipeViewSet(ModelViewSet):
     )
     def shopping_cart(self, request, pk=None):
         """Action для управления корзиной покупок текущего пользователя."""
-        if request.method == 'GET':
-            return
         return self.service_recipe_options_action(request, ShoppingCart, pk)
 
     @action(
@@ -232,7 +235,7 @@ class RecipeViewSet(ModelViewSet):
         user = request.user
         ingredients = (
             IngredientRecipe.objects
-            .filter(recipe__shopping_cart__user=user)
+            .filter(recipe__recipes_in_shopping_cart__user=user)
             .values(
                 'ingredient__name',
                 'ingredient__measurement_unit'
@@ -257,5 +260,4 @@ def redirect_short_link(request, code):
         recipe_id = HASHIDS.decode(code)[0]
     except IndexError:
         return Response(status=status.HTTP_404_NOT_FOUND)
-    else:
-        return redirect(f'/recipes/{recipe_id}')
+    return redirect(f'/recipes/{recipe_id}')

@@ -183,6 +183,9 @@ python manage.py collectstatic
 exit
 ```
 
+## Документация к API:
+https://foodgram.sitkliph.com/api/docs/
+
 ## Пример:
 https://foodgram.sitkliph.com/recipes
 
