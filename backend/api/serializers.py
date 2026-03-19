@@ -55,19 +55,6 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class IngredientRecipeListSerializer(serializers.ListSerializer):
-    """Сериализатор списка для сериализатора IngredientRecipeSerializer."""
-
-    def validate(self, data):
-        ingredient_ids = [item['ingredient'].id for item in data]
-
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError(
-                'Ингредиенты не должны повторяться.'
-            )
-        return data
-
-
 class IngredientRecipeSerializer(serializers.ModelSerializer):
     """Сериализатор для поля M:N Ingredients сериализатора Recipe."""
 
@@ -84,7 +71,6 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
         model = IngredientRecipe
         fields = ('id', 'name', 'measurement_unit', 'amount')
         read_only_fields = ('name', 'measurement_unit')
-        list_serializer_class = IngredientRecipeListSerializer
 
 
 class RecipeBaseSerializer(serializers.ModelSerializer):
@@ -133,7 +119,7 @@ class RecipeReadSerializer(RecipeBaseSerializer):
 
         return (
             user.is_authenticated
-            and user.recipes_in_shopping_cart.filter(recipe=obj).exists()
+            and user.shopping_carts.filter(recipe=obj).exists()
         )
 
 
@@ -157,16 +143,20 @@ class RecipeWriteSerializer(RecipeBaseSerializer):
         return value
 
     def validate(self, data):
-        request = self.context.get('request')
-        if request.method == 'PATCH':
-            required_fields = [
-                'ingredient_amounts', 'tags', 'name', 'text', 'cooking_time'
-            ]
-            for field in required_fields:
-                if field not in data:
-                    raise serializers.ValidationError(
-                        {field: 'Не заполнено обязательное поле.'}
-                    )
+        required_fields = [
+            'ingredient_amounts', 'tags', 'name', 'text', 'cooking_time'
+        ]
+        for field in required_fields:
+            if field not in data:
+                raise serializers.ValidationError(
+                    {field: 'Не заполнено обязательное поле.'}
+                )
+
+        ingredient_ids = [item['ingredient_amounts'].id for item in data]
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться.'
+            )
 
         tags = data.get('tags')
         if tags and len(tags) != len(set(tags)):
@@ -199,14 +189,11 @@ class RecipeWriteSerializer(RecipeBaseSerializer):
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredient_amounts')
-
-        super().update(instance, validated_data)
-
         instance.tags.set(tags)
         instance.ingredient_amounts.all().delete()
         self.create_ingredients(instance, ingredients)
 
-        return instance
+        return super().update(instance, validated_data)
 
 
 class RecipeMinifiedSerializer(serializers.ModelSerializer):
@@ -243,7 +230,7 @@ class SubscriptionSerializer(UserReadSerializer):
         if limit:
             try:
                 limit = int(limit)
-            except ValueError:
+            except (ValueError, TypeError):
                 raise serializers.ValidationError({
                     'recipes_limit': 'Значение должно быть целым числом.'
                 })

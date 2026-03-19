@@ -163,7 +163,7 @@ class ShoppingCart(RecipeOptionsAbsractModel):
     """Модель корзины покупок пользователей."""
 
     class Meta(RecipeOptionsAbsractModel.Meta):
-        default_related_name = 'recipes_in_shopping_cart'
+        default_related_name = 'shopping_carts'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],

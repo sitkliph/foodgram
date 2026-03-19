@@ -12,6 +12,7 @@ CSV_DEFAULT_DIR = BASE_DIR.parent / 'data/'
 
 class Command(BaseCommand):
     """Менеджмент команда для заполнения базы данных из CSV файлов."""
+
     help = 'Импорт данных из CSV файлов директории в базу даннных.'
 
     @property

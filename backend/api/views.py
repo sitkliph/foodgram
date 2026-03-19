@@ -32,11 +32,6 @@ class UserCustomViewSet(UserViewSet):
 
     http_method_names = ['get', 'post', 'put', 'delete', 'head', 'options']
 
-    # def get_permissions(self):
-    #     if self.action == 'update':
-    #         return [DenyAll(), ]
-    #     return super().get_permissions()
-
     @action(
         ['GET', ],
         detail=False,
@@ -45,7 +40,12 @@ class UserCustomViewSet(UserViewSet):
     def me(self, request, *args, **kwargs):
         return super().me(request, *args, **kwargs)
 
-    @action(methods=['PUT', 'DELETE'], detail=False, url_path='me/avatar')
+    @action(
+        methods=['PUT', 'DELETE'],
+        detail=False,
+        url_path='me/avatar',
+        permission_classes=[IsAuthenticated, ]
+    )
     def avatar(self, request):
         """Action для управления аватаром текущего пользователя."""
         user = request.user
@@ -53,11 +53,9 @@ class UserCustomViewSet(UserViewSet):
             serializer = UserAvatarSerializer(
                 user, data=request.data, context={'request': request}
             )
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-                return Response(
-                    serializer.data, status=status.HTTP_200_OK
-                )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         user.avatar = None
         user.save()
@@ -83,7 +81,11 @@ class UserCustomViewSet(UserViewSet):
 
         return self.get_paginated_response(serializer.data)
 
-    @action(methods=['POST', 'DELETE'], detail=True)
+    @action(
+        methods=['POST', 'DELETE'],
+        detail=True,
+        permission_classes=[IsAuthenticated, ]
+    )
     def subscribe(self, request, id=None):
         """Action для добавления и удаления подписок текущего пользователя."""
         author = get_object_or_404(
@@ -235,7 +237,7 @@ class RecipeViewSet(ModelViewSet):
         user = request.user
         ingredients = (
             IngredientRecipe.objects
-            .filter(recipe__recipes_in_shopping_cart__user=user)
+            .filter(recipe__shopping_carts__user=user)
             .values(
                 'ingredient__name',
                 'ingredient__measurement_unit'
