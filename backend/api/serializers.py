@@ -152,7 +152,9 @@ class RecipeWriteSerializer(RecipeBaseSerializer):
                     {field: 'Не заполнено обязательное поле.'}
                 )
 
-        ingredient_ids = [item['ingredient_amounts'].id for item in data]
+        ingredient_ids = [
+            item['ingredient'].id for item in data['ingredient_amounts']
+        ]
         if len(ingredient_ids) != len(set(ingredient_ids)):
             raise serializers.ValidationError(
                 'Ингредиенты не должны повторяться.'

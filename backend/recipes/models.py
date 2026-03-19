@@ -49,7 +49,7 @@ class Ingredient(models.Model):
         ordering = ['name', ]
 
     def __str__(self):
-        return super().__str__() + f', {self.measurement_unit}'
+        return f'{self.name[:CHARS_LIMIT]}, {self.measurement_unit}'
 
 
 class Recipe(models.Model):
